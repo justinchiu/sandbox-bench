@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sandbox-bench"
+version = "0.1.0"
+description = "Benchmarking suite for comparing Morph and Modal sandboxes"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "Sandbox Bench", email = "bench@example.com"}
+]
+dependencies = [
+    "modal",
+    "morphcloud",
+    "rich",
+    "click",
+    "psutil",
+    "python-dotenv",
+    "runloop-api-client>=0.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "pytest-benchmark",
+    "black",
+    "ruff",
+    "mypy",
+    "ipython",
+]
+
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "B", "C90"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
