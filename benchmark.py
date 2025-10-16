@@ -43,14 +43,20 @@ class SandboxBenchmark:
         """Run a single Morph sandbox and return the execution time"""
         start = time.perf_counter()
 
-        # Start instance and run code
-        with client.instances.start(snapshot_id=snapshot_id) as instance:
-            instance.wait_until_ready()
+        # Start instance using async API
+        instance = await client.instances.astart(snapshot_id=snapshot_id)
 
-            with instance.ssh() as ssh:
-                # Write the test script and execute it
-                ssh.run(f"echo '{TEST_SCRIPT}' > /tmp/test.py")
-                result = ssh.run("python3 /tmp/test.py")
+        # Wait for instance to be ready
+        await instance.await_until_ready()
+
+        # Use async SSH context manager
+        async with instance.assh() as ssh:
+            # Write the test script and execute it
+            await ssh.arun(f"echo '{TEST_SCRIPT}' > /tmp/test.py")
+            result = await ssh.arun("python3 /tmp/test.py")
+
+        # Stop the instance
+        await instance.astop()
 
         elapsed = time.perf_counter() - start
         return elapsed
@@ -67,8 +73,8 @@ class SandboxBenchmark:
         # Initialize Morph client
         client = MorphCloudClient()
 
-        # Create a snapshot for testing with standardized VM config
-        snapshot = client.snapshots.create(
+        # Create a snapshot for testing with standardized VM config using async API
+        snapshot = await client.snapshots.acreate(
             image_id="morphvm-minimal",
             vcpus=VM_CONFIG["vcpus"],
             memory=VM_CONFIG["memory_mb"],
@@ -104,20 +110,20 @@ class SandboxBenchmark:
 
         start = time.perf_counter()
 
-        # Create and run a Modal sandbox with standardized configuration
-        sandbox = modal.Sandbox.create(
+        # Create and run a Modal sandbox with standardized configuration using async API
+        sandbox = await modal.Sandbox.create.aio(
             "python3", f"-c \"{TEST_SCRIPT}\"",
             app=app,
             cpu=float(VM_CONFIG["vcpus"]),  # 1 CPU core
-            memory=VM_CONFIG["memory_mb"],   # 1GB RAM
+            memory=VM_CONFIG["memory_mb"],   # 2GB RAM
             timeout=60  # 60 second timeout
         )
 
-        # Wait for completion
-        sandbox.wait()
+        # Wait for completion using async API
+        await sandbox.wait.aio()
 
         # Read output (optional, for verification)
-        output = sandbox.stdout.read()
+        output = await sandbox.stdout.read.aio()
 
         elapsed = time.perf_counter() - start
         return elapsed
@@ -131,8 +137,8 @@ class SandboxBenchmark:
         console.print("\n[magenta]Testing Modal sandbox startup...[/magenta]")
         console.print(f"  Running {self.concurrent} sandboxes concurrently, {self.batches} batches")
 
-        # Create or look up Modal app
-        app = modal.App.lookup("sandbox-benchmark", create_if_missing=True)
+        # Create or look up Modal app using async API
+        app = await modal.App.lookup.aio("sandbox-benchmark", create_if_missing=True)
 
         # Run batches
         for batch_num in range(self.batches):
@@ -180,7 +186,7 @@ class SandboxBenchmark:
         )
 
         # Execute the test script
-        result = await client.devboxes.execute_sync(
+        result = await client.devboxes.execute(
             id=devbox.id,
             command=f"python3 -c '{TEST_SCRIPT}'"
         )
