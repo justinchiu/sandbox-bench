@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-sandbox_bench.egg-info/PKG-INFO
-sandbox_bench.egg-info/SOURCES.txt
-sandbox_bench.egg-info/dependency_links.txt
-sandbox_bench.egg-info/requires.txt
-sandbox_bench.egg-info/top_level.txt
