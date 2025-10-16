@@ -18,12 +18,13 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRe
 console = Console()
 
 # Standardized VM Configuration across all providers
-# All sandboxes use: 1 vCPU, 2GB RAM, 2GB disk (where configurable)
+# All sandboxes use: 1 vCPU, 2GB RAM, 8GB disk
 # Note: Runloop requires minimum 2GB RAM for 1 vCPU (1:2 ratio)
+# Note: Morph requires minimum 8GB disk
 VM_CONFIG = {
     "vcpus": 1,
     "memory_mb": 2048,  # 2GB (minimum for Runloop with 1 vCPU)
-    "disk_gb": 2        # 2GB
+    "disk_gb": 8        # 8GB (minimum for Morph)
 }
 
 # Simple test script that sandboxes will execute
@@ -43,17 +44,18 @@ class SandboxBenchmark:
         """Run a single Morph sandbox and return the execution time"""
         start = time.perf_counter()
 
-        # Start instance using async API
-        instance = await client.instances.astart(snapshot_id=snapshot_id)
+        # Start an instance from the snapshot
+        instance = await client.instances.astart(
+            snapshot_id=snapshot_id,
+            timeout=60.0  # Wait up to 60 seconds for instance to be ready
+        )
 
-        # Wait for instance to be ready
-        await instance.await_until_ready()
+        # Execute the test script using aexec for direct command execution
+        result = await instance.aexec(f"python3 -c '{TEST_SCRIPT}'", timeout=30.0)
 
-        # Use async SSH context manager
-        async with instance.assh() as ssh:
-            # Write the test script and execute it
-            await ssh.arun(f"echo '{TEST_SCRIPT}' > /tmp/test.py")
-            result = await ssh.arun("python3 /tmp/test.py")
+        # Check execution was successful
+        if result.exit_code != 0:
+            console.print(f"    [yellow]Warning: Script exit code {result.exit_code}: {result.stderr}[/yellow]")
 
         # Stop the instance
         await instance.astop()
@@ -71,15 +73,22 @@ class SandboxBenchmark:
         console.print(f"  Running {self.concurrent} sandboxes concurrently, {self.batches} batches")
 
         # Initialize Morph client
-        client = MorphCloudClient()
+        api_key = os.getenv("MORPH_API_KEY")
+        if not api_key:
+            console.print("[red]MORPH_API_KEY not set. Please set your API key.[/red]")
+            return []
 
-        # Create a snapshot for testing with standardized VM config using async API
+        client = MorphCloudClient(api_key=api_key)
+
+        # Create a snapshot with the sandbox Morph VM image (includes Python)
+        console.print("  Creating snapshot with morphvm-sandbox image...")
         snapshot = await client.snapshots.acreate(
-            image_id="morphvm-minimal",
-            vcpus=VM_CONFIG["vcpus"],
-            memory=VM_CONFIG["memory_mb"],
-            disk_size=VM_CONFIG["disk_gb"] * 1024  # Convert GB to MB
+            image_id="morphvm-sandbox",
+            vcpus=VM_CONFIG["vcpus"],  # 1 vCPU
+            memory=VM_CONFIG["memory_mb"],  # 2048 MB (2GB)
+            disk_size=VM_CONFIG["disk_gb"] * 1024  # Convert GB to MB (8GB = 8192MB)
         )
+        console.print(f"  Using snapshot ID: {snapshot.id}")
 
         # Run batches
         for batch_num in range(self.batches):
@@ -124,6 +133,8 @@ class SandboxBenchmark:
 
         # Read output (optional, for verification)
         output = await sandbox.stdout.read.aio()
+
+        await sandbox.terminate.aio()
 
         elapsed = time.perf_counter() - start
         return elapsed
@@ -176,7 +187,7 @@ class SandboxBenchmark:
             # Set resources - Runloop requires 1:2 CPU:memory ratio minimum
             custom_cpu_cores=VM_CONFIG["vcpus"],  # 1 CPU core
             custom_gb_memory=2,  # 2 GB memory (minimum for 1 CPU)
-            custom_disk_size=VM_CONFIG["disk_gb"],  # 2 GB disk
+            custom_disk_size=VM_CONFIG["disk_gb"],  # 8 GB disk
             resource_size_request="CUSTOM_SIZE"  # Use custom sizing
         )
 
