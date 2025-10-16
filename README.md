@@ -87,8 +87,30 @@ Python version: 3.13
   Runloop is 1.58x slower (58.0% more time) than Morph
 ```
 
+## Latest Benchmark Results (2025-10-16)
+
+Results from running 64 total iterations (32 concurrent, 2 batches) with Python 3.13:
+
+### Performance Summary
+- **Morph**: Mean 4.50s, Median 5.15s (Min: 2.49s, Max: 7.70s)
+- **Modal**: Mean 1.80s, Median 1.78s (Min: 1.24s, Max: 2.69s) - **Fastest** 🏆
+- **Runloop**: Mean 3.31s, Median 3.26s (Min: 2.27s, Max: 4.63s)
+
+### Key Findings
+- Modal demonstrated the best and most consistent performance with:
+  - 2.5x faster mean time than Morph
+  - 1.8x faster mean time than Runloop
+  - Lowest standard deviation (0.28s), showing excellent consistency
+- Morph showed high variability (std dev: 1.30s) with two distinct performance patterns
+- Runloop provided moderate performance with reasonable consistency (std dev: 0.48s)
+
+### VM Configuration Used
+- vCPUs: 1
+- Memory: 2048 MB
+- Disk: 8 GB
+
 ## Requirements
 
 - Python 3.13+
 - Internet connection for API calls
-- Valid API credentials for each provider you want to test# sandbox-bench
+- Valid API credentials for each provider you want to test

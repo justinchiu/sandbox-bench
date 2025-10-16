@@ -35,7 +35,7 @@ print(f"Python {sys.version_info.major}.{sys.version_info.minor} ready")
 
 
 class SandboxBenchmark:
-    def __init__(self, concurrent: int = 50, batches: int = 2):
+    def __init__(self, concurrent: int = 32, batches: int = 2):
         self.concurrent = concurrent  # Number of sandboxes to run concurrently
         self.batches = batches  # Number of batches to run
         self.results: Dict[str, List[float]] = {}
@@ -430,8 +430,8 @@ async def main():
     parser.add_argument(
         "--concurrent",
         type=int,
-        default=50,
-        help="Number of concurrent sandboxes per batch (default: 50)"
+        default=32,
+        help="Number of concurrent sandboxes per batch (default: 32)"
     )
     parser.add_argument(
         "--batches",
